@@ -13,7 +13,7 @@ class InfoRepresentation(typing.Protocol):
     def create(raw_into : str) -> typing.Self:
         pass
     
-    def to_raw_string(self) -> typing.Generator[str] | str:
+    def to_raw_string(self) -> typing.Generator[str , None , None] | str:
         pass
     @staticmethod
     def corresponds(raw_info:str) ->bool:
@@ -388,7 +388,7 @@ class OptionalKeyDict:
     
     def to_raw_string(self) -> typing.Generator[str , None , None]:
         
-        first_line : str = '\t' * self.start_spaces + f'{self.key}='*(self.key is not None) + '{' + '\n' * self.end_spaces 
+        first_line : str = '\t' * self.first_line_start + f'{self.key}='*(self.key is not None) + '{' + '\n' 
         
         yield first_line
         
@@ -400,7 +400,7 @@ class OptionalKeyDict:
             else:
                 yield from raw_string
         
-        end_parenthesis : str = '\t' * self.start_spaces + '}' + '\n' * self.end_spaces
+        end_parenthesis : str = '\t' * self.last_line_start + '}' + '\n'
         
         
         yield end_parenthesis

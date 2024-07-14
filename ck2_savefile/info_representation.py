@@ -3,9 +3,22 @@ import typing
 from dataclasses import dataclass
 
 @dataclass
+class LastPositionData:
+    last_line_index : int
+    last_line_start : int
+    last_line_end : int
+    
+
+@dataclass
 class SimpleInfoChange :
     line_number : int
     new_line : str
+
+@dataclass
+class ComplexChanges:
+    insertion_index : int
+    insertion_generator : typing.Generator[str, None, None]
+    
 
 class InfoRepresentation(typing.Protocol):
     
@@ -19,6 +32,10 @@ class InfoRepresentation(typing.Protocol):
     def corresponds(raw_info:str) ->bool:
         pass
     def change_value(self , other : typing.Any) -> list[tuple[int , str]]:
+        pass
+    
+    @property
+    def last_line_position(self) -> LastPositionData:
         pass
 
     
@@ -65,6 +82,14 @@ class OneLineKeyValueInfo:
         return SimpleInfoChange(
             line_number = self.index,
             new_line = self.to_raw_string()
+        )
+    
+    @property
+    def last_line_position(self) -> LastPositionData:
+        return LastPositionData(
+            last_line_index = self.index,
+            last_line_start = self.start_spaces,
+            last_line_end = self.end_spaces
         )
 class MultiKeyValueInfo():
     def __init__(self,
@@ -119,6 +144,13 @@ class MultiKeyValueInfo():
                     new_line = self.to_raw_string()
                 )
         raise Exception("Couldn't find the key in the info .")
+    @property
+    def last_line_position(self) -> LastPositionData:
+        return LastPositionData(
+            last_line_index = self.index,
+            last_line_start = self.start_space,
+            last_line_end = self.end_spaces
+        )
 
 class OneLineListInfo:
     def __init__(self ,
@@ -159,6 +191,13 @@ class OneLineListInfo:
         return SimpleInfoChange(
             line_number = self.index,
             new_line = self.to_raw_string()
+        )
+    @property
+    def last_line_position(self) -> LastPositionData:
+        return LastPositionData(
+            last_line_index = self.index,
+            last_line_start = self.start_spaces,
+            last_line_end = self.end_spaces
         )
 
 class OneLineKeyListInfo:
@@ -207,13 +246,20 @@ class OneLineKeyListInfo:
             line_number = self.index,
             new_line = self.to_raw_string()
         )
+    @property
+    def last_line_position(self) -> LastPositionData:
+        return LastPositionData(
+            last_line_index = self.index,
+            last_line_start = self.start_spaces,
+            last_line_end = self.end_spaces
+        )
 class DictInfo:
     
     def __init__(self ,
                  start_index : int,
                  end_index : int ,
                  key : str ,
-                 value : list[typing.Self | OneLineKeyListInfo | OneLineListInfo | OneLineKeyValueInfo],
+                 value : list[InfoRepresentation] ,#list[typing.Self | OneLineKeyListInfo | OneLineListInfo | OneLineKeyValueInfo],
                  start_spaces : int,
                  end_spaces : int
                  ):
@@ -306,6 +352,34 @@ class DictInfo:
         
         
         yield end_parenthesis
+    @property
+    def last_line_position(self) -> LastPositionData:
+        return LastPositionData(
+            last_line_index = self.last_line_position,
+            last_line_start = self.start_spaces,
+            last_line_end = self.end_spaces
+        )
+    def _extend_one_line_key_value_info(self , input : dict ,last_line_data : LastPositionData) -> ComplexChanges:
+        new_line = OneLineKeyValueInfo(
+            index = last_line_data.last_line_index + 1 ,
+            data_key = input.get('data_key'),
+            data_value= input.get('data_value'),
+            start_spaces= last_line_data.last_line_start ,
+            end_spaces = last_line_data.last_line_end
+        )
+        
+        return ComplexChanges(
+            insertion_index = new_line.index,
+            insertion_generator= (x for x in [new_line.to_raw_string()])
+        )
+    def extend(self , input : dict , class_type : typing.Type[InfoRepresentation]) -> ComplexChanges:
+        final_value = self.value[-1]
+        last_line_data = final_value.last_line_position 
+        if issubclass(class_type, OneLineKeyValueInfo):
+            
+            return self._extend_one_line_key_value_info(input = input ,
+                                                        last_line_data = last_line_data
+                                                        )
     
     
 
@@ -404,3 +478,10 @@ class OptionalKeyDict:
         
         
         yield end_parenthesis
+    @property
+    def last_line_position(self) -> LastPositionData:
+        return LastPositionData(
+            last_line_index = self.last_line_position,
+            last_line_start = self.last_line_start,
+            last_line_end = 1
+        )

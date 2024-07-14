@@ -111,8 +111,8 @@ class OptionalKeyDictSearch:
     
     def _get_values(self , info : OptionalKeyDict) -> typing.Generator[InfoRepresentation , None , None]:
         if self.get_value_flag:
-            yield from (x for x in info.value)
-        else :
+            yield from info.value
+        else:
             yield info
     
     def get_values(self , info : OptionalKeyDict) -> tuple[typing.Generator[InfoRepresentation, None, None] , bool]:

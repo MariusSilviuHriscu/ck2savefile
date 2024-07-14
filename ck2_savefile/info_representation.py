@@ -37,6 +37,10 @@ class InfoRepresentation(typing.Protocol):
     @property
     def last_line_position(self) -> LastPositionData:
         pass
+    
+    @staticmethod
+    def create_from_dict(input_dict : dict) -> typing.Self:
+        pass
 
     
 class OneLineKeyValueInfo:
@@ -91,6 +95,9 @@ class OneLineKeyValueInfo:
             last_line_start = self.start_spaces,
             last_line_end = self.end_spaces
         )
+    
+
+        
 class MultiKeyValueInfo():
     def __init__(self,
                  index : int,
@@ -359,7 +366,21 @@ class DictInfo:
             last_line_start = self.start_spaces,
             last_line_end = self.end_spaces
         )
-    def _extend_one_line_key_value_info(self , input : dict ,last_line_data : LastPositionData) -> ComplexChanges:
+    def _extend_one_line_key_value_info(self ,
+                                        input : dict |  OneLineKeyValueInfo,
+                                        last_line_data : LastPositionData
+                                        ) -> ComplexChanges:
+        
+        if isinstance(input , OneLineKeyListInfo):
+            
+            input.end_spaces = last_line_data.last_line_end
+            input.start_spaces = last_line_data.last_line_start
+            
+            return ComplexChanges(
+                insertion_index = last_line_data.last_line_index + 1,
+                insertion_generator = (x for x in [input.to_raw_string()])
+            )
+        
         new_line = OneLineKeyValueInfo(
             index = last_line_data.last_line_index + 1 ,
             data_key = input.get('data_key'),
@@ -372,7 +393,14 @@ class DictInfo:
             insertion_index = new_line.index,
             insertion_generator= (x for x in [new_line.to_raw_string()])
         )
-    def extend(self , input : dict , class_type : typing.Type[InfoRepresentation]) -> ComplexChanges:
+    def _extend_dict_info(self, 
+                          input : dict | typing.Self ,
+                          last_line_data : LastPositionData
+                          ) -> ComplexChanges:
+        if isinstance(input,dict):
+            pass
+        
+    def extend(self , input : dict | InfoRepresentation , class_type : typing.Type[InfoRepresentation]) -> ComplexChanges:
         final_value = self.value[-1]
         last_line_data = final_value.last_line_position 
         if issubclass(class_type, OneLineKeyValueInfo):
@@ -380,6 +408,9 @@ class DictInfo:
             return self._extend_one_line_key_value_info(input = input ,
                                                         last_line_data = last_line_data
                                                         )
+        if issubclass(class_type , DictInfo):
+            pass
+            
     
     
 

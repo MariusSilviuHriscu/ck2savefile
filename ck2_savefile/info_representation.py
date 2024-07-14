@@ -174,7 +174,7 @@ class OneLineKeyListInfo:
         self.data_list = data_list
         self.start_spaces = start_spaces
         self.end_spaces = end_spaces
-    
+    @staticmethod
     def create(raw_info : str , index : int) -> typing.Self:
         
         start_spaces = raw_info.count('\t')
@@ -331,7 +331,7 @@ class OptionalKeyDict:
         
         return raw_info.endswith('{\n') or raw_info.endswith('{\n')
     
-    staticmethod
+    @staticmethod
     def create(first_line : str,start_index: int, ck2generator : typing.Generator[str,None,None] ) -> typing.Self:
         
         first_line_start = first_line.count('\t')

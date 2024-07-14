@@ -15,76 +15,21 @@ class ParseResponse:
         """Return the generator for producing InfoRepresentation objects."""
         if callable(self.response_generator_func):
             return self.response_generator_func()
-        return self.response_generator_func
-
+        return self.response_generator_func    
     def search_by_term(self, term: SearchType, current_data: typing.Generator[InfoRepresentation, None, None] | None = None
                       ) -> typing.Generator[InfoRepresentation, None, None]:
         """Search within the data based on the provided term."""
         if current_data is None:
             current_data = self.generator
-            
-        if isinstance(term, OneLineKeyValueSearch):
-            return self._search_one_line_key_value(term = term, current_data = current_data)
-        elif isinstance(term, DictSearch):
-            return self._search_dict(term = term, current_data = current_data)
-        elif isinstance(term , OptionalKeyDictSearch):
-            return self._search_dict(term=term , current_data= current_data)
-
-    def _search_one_line_key_value(self, term: OneLineKeyValueSearch, current_data: typing.Generator[InfoRepresentation, None, None]
-                                  ) -> typing.Generator[InfoRepresentation, None, None]:
-        """Search for OneLineKeyValueSearch terms."""
-        for info in current_data:
-            if isinstance(info, OneLineKeyValueSearch.item_info_type) and info.data_key == term.search_key:
-                yield info
-                if not term.multiple_values_flag:
-                    return
-
-    def _search_dict(self, term: DictSearch, current_data: typing.Generator[InfoRepresentation, None, None]
-                    ) -> typing.Generator[InfoRepresentation, None, None]:
-        """Search for DictSearch terms."""
-        for info in current_data:
-            if (isinstance(info , term.item_info_type) and
-                term.item_info_type == DictSearch.item_info_type and
-                info.key == term.search_key
-                ):
-                if term.multiple_values_flag :
-                    if term.get_value_flag:
-                        yield from (x for x in info.value)
-                    else :
-                        yield info
-                else:
-                    if term.get_value_flag:
-                        yield from (x for x in info.value)
-                        return
-                    else:
-                        yield info
-                        return
-    def _search_optional_key_dict(self , 
-                                  term : OptionalKeyDictSearch ,
-                                  current_data: typing.Generator[InfoRepresentation, None, None]
-                    ) -> typing.Generator[InfoRepresentation, None, None]:
         
         for info in current_data:
-            
-            if isinstance(info , OneLineKeyValueSearch.item_info_type):
+            if term.check_if_valid(info = info):
+                data_generator,multiple_values_flag  = term.get_values(info = info)
                 
-                search_key = term.search_key
+                yield from data_generator
                 
-                if search_key is not None and search_key == info.data_key:
-                    
-                    if term.multiple_values_flag:
-                        if term.get_value_flag:
-                            yield from info.data_value
-                        else:
-                            yield info
-                    else:
-                        if term.get_value_flag:
-                            yield from info.data_value
-                        else:
-                            yield info
-                        return
-                    
-
+                if not multiple_values_flag:
+                    return
     def _unravel_dict_generator(self, current_data: typing.Generator[InfoRepresentation, None, None]
                                ) -> typing.Generator[InfoRepresentation, None, None]:
         """Unravel nested dictionary-like structures."""
@@ -125,3 +70,8 @@ class ParseResponse:
             first_line=self.first_line,
             response_generator_func=current_data
         )
+
+    def __iter__(self ) :
+        if callable(self.response_generator_func):
+            raise Exception('Do not try to parse the whole file please!')
+        return self.generator
